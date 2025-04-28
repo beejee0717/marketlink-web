@@ -453,55 +453,57 @@ class _SellersState extends State<Sellers> {
 
     return DateFormat('MMMM d, y • h:mm a').format(dateTime);
   }
+@override
+Widget build(BuildContext context) {
+  final size = MediaQuery.of(context).size;
+  final bool isMobile = size.width < 600;
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final bool isMobile = size.width < 600;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color.fromARGB(255, 255, 239, 249),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                FadeInLeft(
-                  child: Text(
-                    'Sellers',
-                    style: TextStyle(
-                        fontSize: isMobile ? 20 : 50,
-                        fontWeight: FontWeight.bold),
-                  ),
+  return Container(
+    decoration: const BoxDecoration(
+      color: Color.fromARGB(255, 255, 239, 249),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              FadeInLeft(
+                child: Text(
+                  'Sellers',
+                  style: TextStyle(
+                      fontSize: isMobile ? 20 : 50,
+                      fontWeight: FontWeight.bold),
                 ),
-                SizedBox(
-                  width: 250,
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+              ),
+              SizedBox(
+                width: 250,
+                child: TextField(
+                  controller: searchController,
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value.toLowerCase();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Expanded(
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              setState(() {});
+            },
             child: FutureBuilder<List<QueryDocumentSnapshot>>(
               future: fetchRecentSellers(),
               builder: (context, snapshot) {
@@ -529,6 +531,7 @@ class _SellersState extends State<Sellers> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: GridView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: isMobile ? 1 : 2,
                       crossAxisSpacing: 10,
@@ -638,8 +641,8 @@ class _SellersState extends State<Sellers> {
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
+        ),
+      ],
+    ),
+  );
+}}

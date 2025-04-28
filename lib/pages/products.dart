@@ -203,62 +203,80 @@ class ProductsState extends State<Products> {
     );
   }
 
-  void deleteProduct(BuildContext context, Map<String, dynamic> product,
-      VoidCallback onDelete) async {
-    bool confirmDelete = await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Confirm Deletion"),
-            content: Text(
-                "Are you sure you want to delete '${product['productName']}'?"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child:
-                    const Text("Delete", style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        ) ??
-        false;
 
-    if (confirmDelete == true) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('products')
-            .doc(product['id'])
-            .delete();
+void deleteProduct(BuildContext context, Map<String, dynamic> product,
+    VoidCallback onDelete) async {
+  bool confirmDelete = await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Confirm Deletion"),
+          content: Text(
+              "Are you sure you want to delete '${product['productName']}'?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 
-        if (context.mounted) {
-          Navigator.pop(context);
-          onDelete();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Product deleted successfully")),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error deleting product: $e")),
-          );
-        }
+  if (confirmDelete == true) {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      DocumentReference productDoc =
+          firestore.collection('products').doc(product['id']);
+
+      await deleteSubcollections(productDoc);
+
+      await productDoc.delete();
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        onDelete();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Product deleted successfully")),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error deleting product: $e")),
+        );
       }
     }
   }
+}
 
+Future<void> deleteSubcollections(DocumentReference docRef) async {
+  // FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  // var subcollections = await docRef.collectionGroup(docRef.id).get();
+
+  // for (var subcollection in subcollections.docs) {
+   
+  //   var subDocs = await firestore
+  //       .collection(docRef.path + "/" + subcollection.id)
+  //       .get();
+
+  //   for (var subDoc in subDocs.docs) {
+  //     await deleteSubcollections(subDoc.reference);
+  //     await subDoc.reference.delete();
+  //   }
+  // }
+}
   Future<Map<String, dynamic>> getProductRating(String productId) async {
   try {
-    // Reference to the reviews subcollection
     CollectionReference reviewsRef = FirebaseFirestore.instance
         .collection('products')
         .doc(productId)
         .collection('reviews');
 
-    // Fetch all reviews
     QuerySnapshot querySnapshot = await reviewsRef.get();
 
     if (querySnapshot.docs.isEmpty) {

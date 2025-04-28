@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:marketlinkweb/home.dart';
 import 'package:marketlinkweb/login.dart';
 
 void main() async {
@@ -30,7 +31,7 @@ class MarketLinkWeb extends StatelessWidget {
     return const MaterialApp(
       title: 'MarketLink',
       debugShowCheckedModeBanner: false,
-      home: Login(),
+      home: HomePage(),
     );
   }
 }
