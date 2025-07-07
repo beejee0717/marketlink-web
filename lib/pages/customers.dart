@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:marketlinkweb/components/loading.dart';
 
 class Customers extends StatefulWidget {
   const Customers({super.key});
@@ -20,6 +21,37 @@ class _CustomersState extends State<Customers> {
         .orderBy('createdAt', descending: true)
         .get();
     return querySnapshot.docs;
+  }
+
+  Future<int> ordersCount(String customerId) async {
+    final count = await FirebaseFirestore.instance
+        .collection('orders')
+        .where('customerId', isEqualTo: customerId)
+        .where('status', isEqualTo: 'delivered')
+        .get();
+
+    return count.docs.length;
+  }
+
+  Future<double> calculateTotalSales(String customerId) async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('orders')
+        .where('customerId', isEqualTo: customerId)
+        .where('status', isEqualTo: 'delivered')
+        .get();
+
+    double totalSales = 0.0;
+
+    for (var doc in querySnapshot.docs) {
+      final data = doc.data();
+      final payment = data['totalPayment'];
+
+      if (payment != null && payment is num) {
+        totalSales += payment.toDouble();
+      }
+    }
+
+    return totalSales;
   }
 
   void showCustomer(BuildContext context, Map<String, dynamic> customer) {
@@ -148,6 +180,51 @@ class _CustomersState extends State<Customers> {
                               style: const TextStyle(fontSize: 16),
                             ),
                             const SizedBox(height: 10),
+                            Text(
+                              'Address: ${customer['address'] ?? 'No Address'}',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                const Text('Products Ordered: '),
+                                FutureBuilder<int>(
+                                  future: ordersCount(customer['id']),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Text('Loading...');
+                                    } else if (snapshot.hasError) {
+                                      return const Text('Error');
+                                    } else {
+                                      return Text('${snapshot.data}');
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                const Text('Total Sales: '),
+                                FutureBuilder<double>(
+                                  future: calculateTotalSales(customer['id']),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Text('Loading sales...');
+                                    } else if (snapshot.hasError) {
+                                      return const Text('Error fetching sales');
+                                    } else {
+                                      return Text(
+                                        '₱${snapshot.data!.toStringAsFixed(2)}',
+                                        style: const TextStyle(fontSize: 16),
+                                      );
+                                    }
+                                  },
+                                )
+                              ],
+                            )
                           ],
                         ),
                       ),
@@ -179,8 +256,7 @@ class _CustomersState extends State<Customers> {
       VoidCallback onDelete) async {
     bool confirmDelete = await showDialog(
           context: context,
-          barrierDismissible:
-              true,
+          barrierDismissible: true,
           builder: (context) => AlertDialog(
             title: const Text("Confirm Deletion"),
             content: Text(
@@ -198,7 +274,7 @@ class _CustomersState extends State<Customers> {
             ],
           ),
         ) ??
-        false; 
+        false;
 
     if (confirmDelete) {
       try {
@@ -209,7 +285,7 @@ class _CustomersState extends State<Customers> {
 
         if (context.mounted) {
           Navigator.pop(context);
-          onDelete(); 
+          onDelete();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Customer deleted successfully")),
           );
@@ -420,7 +496,7 @@ class _CustomersState extends State<Customers> {
               future: fetchRecentCustomers(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: Loading());
                 }
                 if (snapshot.hasError) {
                   return const Center(child: Text('Error fetching customers'));
@@ -467,20 +543,25 @@ class _CustomersState extends State<Customers> {
                                 padding: const EdgeInsets.all(10.0),
                                 child: Row(
                                   children: [
-                                 customer['profilePicture'] != null
-    ? ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          customer['profilePicture']!,
-          height: isMobile ? 70 : 100,
-          width: isMobile ? 70 : 100,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.account_circle),
-        ),
-      )
-    :  Icon(Icons.account_circle, size:isMobile ? 70 : 100 ,),
-
+                                    customer['profilePicture'] != null
+                                        ? ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: Image.network(
+                                              customer['profilePicture']!,
+                                              height: isMobile ? 70 : 100,
+                                              width: isMobile ? 70 : 100,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error,
+                                                      stackTrace) =>
+                                                  const Icon(
+                                                      Icons.account_circle),
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.account_circle,
+                                            size: isMobile ? 70 : 100,
+                                          ),
                                     const SizedBox(width: 15),
                                     Expanded(
                                       child: Column(

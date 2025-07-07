@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:marketlinkweb/components/components.dart';
 import 'package:marketlinkweb/pages/customers.dart';
+import 'package:marketlinkweb/pages/dashboard.dart';
 import 'package:marketlinkweb/pages/products.dart';
 import 'package:marketlinkweb/pages/riders.dart';
 import 'package:marketlinkweb/pages/sellers.dart';
 
 class Sidebar extends StatelessWidget {
   final double width;
-  final Function(Widget) onPageSelected; // Callback function
+  final Function(Widget) onPageSelected; 
 
   const Sidebar({super.key, required this.width, required this.onPageSelected});
 
   @override
   Widget build(BuildContext context) {
-    
     final size = MediaQuery.of(context).size;
     final bool isWeb = size.width > 600;
     return Drawer(
@@ -25,11 +25,32 @@ class Sidebar extends StatelessWidget {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            SidebarButton(label: isWeb? 'Customer':'', icon: Icons.person, page: const Customers(), onPageSelected: onPageSelected),
-            SidebarButton(label: isWeb? 'Products':'', icon: Icons.sell, page: const Products(), onPageSelected: onPageSelected),
-            SidebarButton(label: isWeb? 'Sellers':'', icon: Icons.store, page: const Sellers(), onPageSelected: onPageSelected),
-            SidebarButton(label: isWeb? 'Riders':'', icon: Icons.motorcycle, page: const Riders(), onPageSelected: onPageSelected),
-
+            SidebarButton(
+              label: isWeb ? 'Dashboard' : '',
+              icon: Icons.insights,
+              page: Dashboard(onPageSelected: onPageSelected),
+              onPageSelected: onPageSelected,
+            ),
+            SidebarButton(
+                label: isWeb ? 'Customer' : '',
+                icon: Icons.person,
+                page: const Customers(),
+                onPageSelected: onPageSelected),
+            SidebarButton(
+                label: isWeb ? 'Products' : '',
+                icon: Icons.sell,
+                page: const Products(),
+                onPageSelected: onPageSelected),
+            SidebarButton(
+                label: isWeb ? 'Sellers' : '',
+                icon: Icons.store,
+                page: const Sellers(),
+                onPageSelected: onPageSelected),
+            SidebarButton(
+                label: isWeb ? 'Riders' : '',
+                icon: Icons.motorcycle,
+                page: const Riders(),
+                onPageSelected: onPageSelected),
           ],
         ),
       ),
@@ -43,11 +64,15 @@ class SidebarButton extends StatelessWidget {
   final Widget page;
   final Function(Widget) onPageSelected;
 
-  const SidebarButton({super.key, required this.label, required this.icon, required this.page, required this.onPageSelected});
+  const SidebarButton(
+      {super.key,
+      required this.label,
+      required this.icon,
+      required this.page,
+      required this.onPageSelected});
 
   @override
   Widget build(BuildContext context) {
-    
     return GestureDetector(
       onTap: () {
         onPageSelected(page); // Update the page in HomePage

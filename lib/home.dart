@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:marketlinkweb/components/header.dart';
 import 'package:marketlinkweb/components/sidebar.dart';
 import 'package:marketlinkweb/pages/customers.dart';
+import 'package:marketlinkweb/pages/dashboard.dart';
+import 'package:marketlinkweb/pages/riders.dart';
+import 'package:marketlinkweb/pages/sellers.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,7 +14,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Widget _selectedPage = const Customers(); // Default page
+  late Widget _selectedPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPage = Dashboard(onPageSelected: _navigateToPage);
+    // _selectedPage = const Customers();
+  }
 
   void _navigateToPage(Widget page) {
     setState(() {
@@ -32,7 +42,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Sidebar(
                   width: size.width * 0.13,
-                  onPageSelected: _navigateToPage, // Pass the function to Sidebar
+                  onPageSelected: _navigateToPage,
                 ),
                 Expanded(child: _selectedPage),
               ],

@@ -31,7 +31,7 @@ class MarketLinkWeb extends StatelessWidget {
     return const MaterialApp(
       title: 'MarketLink',
       debugShowCheckedModeBanner: false,
-      home: HomePage(),
+      home: Login(),
     );
   }
 }

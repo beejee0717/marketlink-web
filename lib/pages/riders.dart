@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:marketlinkweb/components/loading.dart';
 
 class Riders extends StatefulWidget {
   const Riders({super.key});
@@ -21,6 +22,17 @@ class _RidersState extends State<Riders> {
         .get();
     return querySnapshot.docs;
   }
+
+
+Future<int> riderDeliveryCount(String riderId) async{
+final deliveryCount = await FirebaseFirestore.instance
+.collection('orders').where('riderId', isEqualTo: riderId)
+.where('status', isEqualTo: 'delivered').get();
+
+return deliveryCount.docs.length;
+}
+
+
 
   void showRider(BuildContext context, Map<String, dynamic> rider) {
     final size = MediaQuery.of(context).size;
@@ -121,6 +133,65 @@ class _RidersState extends State<Riders> {
                               ],
                             ),
                             const SizedBox(height: 5),
+                               Row(
+                              children: [
+                            GestureDetector(
+  onTap: () {
+    showFullImage(context, rider['imageID']);
+  },
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    decoration: BoxDecoration(
+      color: Colors.blue, 
+      borderRadius: BorderRadius.circular(12), 
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: const Text(
+      'Show ID',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+)
+   , const  SizedBox(width: 10),   GestureDetector(
+  onTap: () {
+    showFullImage(context, rider['imageSelfie']);
+  },
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    decoration: BoxDecoration(
+      color: Colors.yellow, 
+      borderRadius: BorderRadius.circular(12), 
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: const Text(
+      'Show Selfie',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+)
+
+                               ],
+                            ),
                             rider['approved']
                                 ? const Text(
                                     'Approved',
@@ -166,6 +237,29 @@ class _RidersState extends State<Riders> {
                               style: const TextStyle(fontSize: 16),
                             ),
                             const SizedBox(height: 10),
+                            if(rider['approved']==true)...[
+Text('Address: ${rider['address'] ?? 'No address'}'),
+                                   const SizedBox(height: 10),
+ Row(
+   children: [
+    const Text('Products Delivered: '),
+    
+     FutureBuilder<int>(
+      future: riderDeliveryCount(rider['id']),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text('Loading...');
+        } else if (snapshot.hasError) {
+          return const Text('Error');
+        } else {
+          return Text('${snapshot.data}');
+        }
+      },
+     ),
+   ],
+ ),
+
+                            ]
                           ],
                         ),
                       ),
@@ -333,42 +427,72 @@ class _RidersState extends State<Riders> {
     }
   }
 
-  void showFullImage(BuildContext context, String imageUrl) {
+void showFullImage(BuildContext context, String? imageUrl) {
+  if (imageUrl == null || imageUrl.trim().isEmpty) {
     showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.black,
-          child: Stack(
-            children: [
-              InteractiveViewer(
-                panEnabled: true,
-                boundaryMargin: const EdgeInsets.all(20),
-                minScale: 0.5,
-                maxScale: 3.0,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.image_not_supported,
-                      size: 100,
-                      color: Colors.white),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ],
-          ),
+        return AlertDialog(
+          title: const Text('No Image'),
+          content: const Text('No image uploaded.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         );
       },
     );
+    return;
   }
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 3.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(
+                    Icons.image_not_supported,
+                    size: 100,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   void approval(BuildContext context, Map<String, dynamic> rider,
       VoidCallback onApprove) {
@@ -508,7 +632,7 @@ Widget build(BuildContext context) {
               future: fetchRecentRiders(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: Loading());
                 }
                 if (snapshot.hasError) {
                   return const Center(child: Text('Error fetching rider'));
@@ -619,15 +743,9 @@ Widget build(BuildContext context) {
                                     ),
                                     rider['approved']
                                         ? const SizedBox.shrink()
-                                        : IconButton(
-                                            tooltip: 'Approve',
-                                            onPressed: () =>
-                                                approval(context, rider, () {
-                                              setState(() {});
-                                            }),
-                                            icon: const Icon(Icons.check_circle,
-                                                color: Colors.blue),
-                                          )
+                                        :Text('Need Approval',  style: TextStyle(
+                                                fontSize: isMobile ? 12 : 15,
+                                                color: Colors.red),)
                                   ],
                                 ),
                               ),

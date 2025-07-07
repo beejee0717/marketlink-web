@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:marketlinkweb/components/loading.dart';
 
 class Sellers extends StatefulWidget {
   const Sellers({super.key});
@@ -22,9 +23,51 @@ class _SellersState extends State<Sellers> {
     return querySnapshot.docs;
   }
 
+ Future<int> sellerProductsCount(String sellerId) async {
+  final querySnapshot = await FirebaseFirestore.instance
+      .collection('products')
+      .where('sellerId', isEqualTo: sellerId)
+      .get();
+
+  return querySnapshot.docs.length;
+}
+
+ Future<int> productsSold(String sellerId) async {
+  final querySnapshot = await FirebaseFirestore.instance
+      .collection('orders')
+      .where('sellerId', isEqualTo: sellerId)
+      .where('status', isEqualTo: 'delivered')
+      .get();
+
+  return querySnapshot.docs.length;
+}
+
+Future<double> calculateTotalSales(String sellerId) async {
+  final querySnapshot = await FirebaseFirestore.instance
+      .collection('orders')
+      .where('sellerId', isEqualTo: sellerId)
+      .where('status', isEqualTo: 'delivered')
+      .get();
+
+  double totalSales = 0.0;
+
+  for (var doc in querySnapshot.docs) {
+    final data = doc.data();
+    final payment = data['totalPayment'];
+    
+    if (payment != null && payment is num) {
+      totalSales += payment.toDouble();
+    }
+  }
+
+  return totalSales;
+}
+
+
+
   void showSeller(BuildContext context, Map<String, dynamic> seller) {
     final size = MediaQuery.of(context).size;
-
+    debugPrint(seller.toString());
     showDialog(
       context: context,
       builder: (context) {
@@ -44,7 +87,8 @@ class _SellersState extends State<Sellers> {
                     children: [
                       GestureDetector(
                         onTap: () {
-                          showFullImage(context, seller['imageUrl']);
+                          showFullImage(context, seller['profilePicture']);
+                          debugPrint('pressed');
                         },
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
@@ -121,6 +165,65 @@ class _SellersState extends State<Sellers> {
                               ],
                             ),
                             const SizedBox(height: 5),
+                            Row(
+                              children: [
+                            GestureDetector(
+  onTap: () {
+    showFullImage(context, seller['imageID']);
+  },
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    decoration: BoxDecoration(
+      color: Colors.blue, 
+      borderRadius: BorderRadius.circular(12), 
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: const Text(
+      'Show ID',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+)
+   , const  SizedBox(width: 10),   GestureDetector(
+  onTap: () {
+    showFullImage(context, seller['imageSelfie']);
+  },
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    decoration: BoxDecoration(
+      color: Colors.yellow, 
+      borderRadius: BorderRadius.circular(12), 
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: const Text(
+      'Show Selfie',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+)
+
+                               ],
+                            ),
                             seller['approved']
                                 ? const Text(
                                     'Approved',
@@ -166,6 +269,96 @@ class _SellersState extends State<Sellers> {
                               style: const TextStyle(fontSize: 16),
                             ),
                             const SizedBox(height: 10),
+                       if (seller['approved'] == true) ...[
+  if (seller['addresses'] != null &&
+      seller['addresses'] is List &&
+      seller['addresses'].isNotEmpty) ...[
+    const Text(
+      'Addresses:',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    const SizedBox(height: 5),
+    ...seller['addresses'].map<Widget>((address) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 5),
+        child: Text(
+          '- $address',
+          style: const TextStyle(fontSize: 16),
+        ),
+      );
+    }).toList(),
+
+    const SizedBox(height: 10),
+  ] else ...[
+    const Text(
+      'No Address',
+      style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+    ),
+    const SizedBox(height: 10),
+  ],
+
+ Row(
+   children: [
+    const Text('Products Listed: '),
+     FutureBuilder<int>(
+      future: sellerProductsCount(seller['id']),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text('Loading...');
+        } else if (snapshot.hasError) {
+          return const Text('Error');
+        } else {
+          return Text('${snapshot.data}');
+        }
+      },
+     ),
+   ],
+ ),
+  const SizedBox(height: 10),
+  Row(
+    children: [
+      const Text('Products Sold: '),
+      FutureBuilder<int>(
+      future: productsSold(seller['id']),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text('Loading...');
+        } else if (snapshot.hasError) {
+          return const Text('Error');
+        } else {
+          return Text('${snapshot.data}');
+        }
+      },
+      ),
+    ],
+  ),
+  const SizedBox(height: 10),
+  Row(
+    children: [
+      const Text('Total Sales: '),
+      FutureBuilder<double>(
+  future: calculateTotalSales(seller['id']),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Text('Loading sales...');
+    } else if (snapshot.hasError) {
+      return const Text('Error fetching sales');
+    } else {
+      return Text(
+        '₱${snapshot.data!.toStringAsFixed(2)}',
+        style: const TextStyle(fontSize: 16),
+      );
+    }
+  },
+)
+
+    ],
+  )
+]
+
                           ],
                         ),
                       ),
@@ -333,42 +526,72 @@ class _SellersState extends State<Sellers> {
     }
   }
 
-  void showFullImage(BuildContext context, String imageUrl) {
+void showFullImage(BuildContext context, String? imageUrl) {
+  if (imageUrl == null || imageUrl.trim().isEmpty) {
     showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.black,
-          child: Stack(
-            children: [
-              InteractiveViewer(
-                panEnabled: true,
-                boundaryMargin: const EdgeInsets.all(20),
-                minScale: 0.5,
-                maxScale: 3.0,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.image_not_supported,
-                      size: 100,
-                      color: Colors.white),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ],
-          ),
+        return AlertDialog(
+          title: const Text('No Image'),
+          content: const Text('No image uploaded.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         );
       },
     );
+    return;
   }
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 3.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(
+                    Icons.image_not_supported,
+                    size: 100,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   void approval(BuildContext context, Map<String, dynamic> seller,
       VoidCallback onApprove) {
@@ -508,7 +731,7 @@ Widget build(BuildContext context) {
               future: fetchRecentSellers(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: Loading());
                 }
                 if (snapshot.hasError) {
                   return const Center(child: Text('Error fetching seller'));
@@ -619,15 +842,9 @@ Widget build(BuildContext context) {
                                     ),
                                     seller['approved']
                                         ? const SizedBox.shrink()
-                                        : IconButton(
-                                            tooltip: 'Approve',
-                                            onPressed: () =>
-                                                approval(context, seller, () {
-                                              setState(() {});
-                                            }),
-                                            icon: const Icon(Icons.check_circle,
-                                                color: Colors.blue),
-                                          )
+                                        : Text('Need Approval',  style: TextStyle(
+                                                fontSize: isMobile ? 12 : 15,
+                                                color: Colors.red),)
                                   ],
                                 ),
                               ),

@@ -1,6 +1,7 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:marketlinkweb/components/loading.dart';
 
 class Products extends StatefulWidget {
   const Products({super.key});
@@ -385,7 +386,7 @@ Future<void> deleteSubcollections(DocumentReference docRef) async {
             future: fetchRecentProducts(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: Loading());
               }
               if (snapshot.hasError) {
                 return const Center(child: Text('Error fetching products'));
