@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:marketlinkweb/components/components.dart';
 import 'package:marketlinkweb/components/loading.dart';
 
 class Customers extends StatefulWidget {
@@ -470,23 +471,31 @@ class _CustomersState extends State<Customers> {
                         fontWeight: FontWeight.bold),
                   ),
                 ),
-                SizedBox(
-                  width: 250,
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                Row(
+                  children: [
+                    refreshButton((){setState(() {
+                    
+                  });}),
+                 const SizedBox(width: 10,),
+                    SizedBox(
+                      width: 250,
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value.toLowerCase();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

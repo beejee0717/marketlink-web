@@ -18,7 +18,7 @@ class Header extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Image.asset(
-              'images/logo_no_text.png',
+              'assets/images/logo_no_text.png',
               height: 40,
             ),
           ),

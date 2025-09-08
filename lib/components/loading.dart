@@ -45,7 +45,7 @@ class _LoadingState extends State<Loading>
           children: [
             Center(
               child: Image.asset(
-                'images/logo_no_text.png',
+                'assets/images/logo_no_text.png',
                 width: 200,
               ),
             ),

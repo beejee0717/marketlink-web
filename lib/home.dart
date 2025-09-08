@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:marketlinkweb/components/header.dart';
 import 'package:marketlinkweb/components/sidebar.dart';
-import 'package:marketlinkweb/pages/customers.dart';
 import 'package:marketlinkweb/pages/dashboard.dart';
-import 'package:marketlinkweb/pages/riders.dart';
-import 'package:marketlinkweb/pages/sellers.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,7 +17,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _selectedPage = Dashboard(onPageSelected: _navigateToPage);
-    // _selectedPage = const Customers();
+    // _selectedPage = const Sellers();
   }
 
   void _navigateToPage(Widget page) {

@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:marketlinkweb/components/loading.dart';
+import 'package:marketlinkweb/components/report.dart';
 import 'package:marketlinkweb/pages/customers.dart';
 import 'package:marketlinkweb/pages/products.dart';
 import 'package:marketlinkweb/pages/riders.dart';
@@ -30,7 +31,9 @@ class _DashboardState extends State<Dashboard> {
   int pendingRiderCount = 0;
   bool isLoading = true;
   bool isSalesLoading = false;
-  Map<String, double> salesPerDay = {};
+
+  Map<String, Map<String, dynamic>> salesPerDay = {};
+  
   DateTime _selectedMonth = DateTime.now();
 
   @override
@@ -40,9 +43,11 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void loadCounts(DateTime selectedMonth) async {
+    if (!mounted) return;
     setState(() {
       isSalesLoading = true;
     });
+
     final customers =
         await FirebaseFirestore.instance.collection('customers').get();
 
@@ -76,27 +81,59 @@ class _DashboardState extends State<Dashboard> {
 
     final startOfMonth = DateTime(selectedMonth.year, selectedMonth.month, 1);
     final endOfMonth = DateTime(selectedMonth.year, selectedMonth.month + 1, 1);
+
     final salesQuery = await FirebaseFirestore.instance
         .collection('orders')
-        .where('dateOrdered',
+        .where('deliveryTimestamp',
             isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-        .where('dateOrdered', isLessThan: Timestamp.fromDate(endOfMonth))
+        .where('deliveryTimestamp', isLessThan: Timestamp.fromDate(endOfMonth))
+        .where('status', isEqualTo: 'delivered')
         .get();
 
-    Map<String, double> tempSales = {};
+    Map<String, Map<String, dynamic>> tempSales = {};
 
-    for (var doc in salesQuery.docs) {
-      final date = (doc['dateOrdered'] as Timestamp).toDate();
-      final key = DateFormat('MM/dd').format(date);
-      final total = (doc['totalPayment'] as num).toDouble();
+   for (var doc in salesQuery.docs) {
+  final data = doc.data();
 
-      if (tempSales.containsKey(key)) {
-        tempSales[key] = tempSales[key]! + total;
-      } else {
-        tempSales[key] = total;
-      }
-    }
+  DateTime? dateOrdered;
+  final rawDate = data['dateOrdered'];
+  if (rawDate is Timestamp) {
+    dateOrdered = rawDate.toDate();
+  } else if (rawDate is DateTime) {
+    dateOrdered = rawDate;
+  } else {
+    continue; 
+  }
 
+  final key = DateFormat('MM/dd').format(dateOrdered);
+
+  double total = 0.0;
+  final rawTotal = data['totalPayment'];
+  if (rawTotal is num) {
+    total = rawTotal.toDouble();
+  }
+
+  int qty = 0;
+  if (data['quantity'] is num) {
+    qty = (data['quantity'] as num).toInt();
+  } else if (data['quantity'] is String) {
+    qty = int.tryParse(data['quantity']) ?? 0;
+  }
+
+  if (tempSales.containsKey(key)) {
+    tempSales[key]!['amount'] =
+        (tempSales[key]!['amount'] as double) + total;
+    tempSales[key]!['count'] =
+        (tempSales[key]!['count'] as int) + qty;
+  } else {
+    tempSales[key] = {
+      'amount': total,
+      'count': qty,
+    };
+  }
+}
+
+    if (!mounted) return;
     setState(() {
       customerCount = customers.size;
       sellerCount = sellers.size;
@@ -113,10 +150,12 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('Sales: $salesPerDay');
     final size = MediaQuery.of(context).size;
     final bool isMobile = size.width < 600;
 
     return Container(
+      height: double.infinity,
       decoration: const BoxDecoration(
         color: Color.fromARGB(255, 255, 239, 249),
       ),
@@ -224,6 +263,7 @@ class _DashboardState extends State<Dashboard> {
                                   IconButton(
                                     icon: const Icon(Icons.arrow_left),
                                     onPressed: () {
+                                      if (!mounted) return;
                                       setState(() {
                                         _selectedMonth = DateTime(
                                             _selectedMonth.year,
@@ -246,6 +286,7 @@ class _DashboardState extends State<Dashboard> {
                                                 DateTime.now().year
                                         ? null
                                         : () {
+                                            if (!mounted) return;
                                             setState(() {
                                               _selectedMonth = DateTime(
                                                   _selectedMonth.year,
@@ -254,11 +295,21 @@ class _DashboardState extends State<Dashboard> {
                                             });
                                           },
                                   ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.picture_as_pdf),
+                                    label: Text(
+                                        "Download Report For ${DateFormat('MMMM yyyy').format(_selectedMonth)}"),
+                                    onPressed: () =>
+                                        generatePdfReport(_selectedMonth),
+                                  ),
                                 ],
                               ),
                             ],
                           ),
+
                           const SizedBox(height: 20),
+
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -274,124 +325,7 @@ class _DashboardState extends State<Dashboard> {
                                 children: [
                                   Opacity(
                                     opacity: isSalesLoading ? 0.3 : 1,
-                                    child: BarChart(
-                                      BarChartData(
-                                        barTouchData: BarTouchData(
-                                          enabled: true,
-                                          touchTooltipData: BarTouchTooltipData(
-                                            tooltipBgColor: Colors.black87,
-                                            getTooltipItem: (group, groupIndex,
-                                                rod, rodIndex) {
-                                              final day = salesPerDay.keys
-                                                  .elementAt(group.x.toInt());
-                                              final amount =
-                                                  rod.toY.toStringAsFixed(2);
-                                              return BarTooltipItem(
-                                                '₱$amount\n$day',
-                                                const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                        alignment:
-                                            BarChartAlignment.spaceAround,
-                                        maxY: _calculateMaxY(salesPerDay),
-                                        titlesData: FlTitlesData(
-                                          leftTitles: AxisTitles(
-                                            sideTitles: SideTitles(
-                                              reservedSize: 50,
-                                              showTitles: true,
-                                              interval: _calculateInterval(
-                                                  salesPerDay),
-                                              getTitlesWidget: (value, meta) {
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          right: 4),
-                                                  child: Text(
-                                                    '₱${value.toInt()}',
-                                                    style: const TextStyle(
-                                                        color: Colors.grey,
-                                                        fontSize: 12),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                          bottomTitles: AxisTitles(
-                                            sideTitles: SideTitles(
-                                              showTitles: true,
-                                              reservedSize: 36,
-                                              interval: 1,
-                                              getTitlesWidget: (value, meta) {
-                                                final index = value.toInt();
-                                                if (index >=
-                                                    salesPerDay.keys.length) {
-                                                  return const SizedBox
-                                                      .shrink();
-                                                }
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          top: 6.0),
-                                                  child: Text(
-                                                    salesPerDay.keys
-                                                        .elementAt(index),
-                                                    style: const TextStyle(
-                                                        fontSize: 10),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                          rightTitles: const AxisTitles(
-                                              sideTitles: SideTitles(
-                                                  showTitles: false)),
-                                          topTitles: const AxisTitles(
-                                              sideTitles: SideTitles(
-                                                  showTitles: false)),
-                                        ),
-                                        gridData: FlGridData(
-                                          show: true,
-                                          horizontalInterval:
-                                              _calculateInterval(salesPerDay),
-                                          getDrawingHorizontalLine: (value) =>
-                                              FlLine(
-                                            color: Colors.grey.withOpacity(0.2),
-                                            strokeWidth: 1,
-                                          ),
-                                        ),
-                                        borderData: FlBorderData(show: false),
-                                        barGroups: salesPerDay.entries
-                                            .toList()
-                                            .asMap()
-                                            .entries
-                                            .map((entry) {
-                                          final index = entry.key;
-                                          final value = entry.value.value;
-                                          return BarChartGroupData(
-                                            x: index,
-                                            barRods: [
-                                              BarChartRodData(
-                                                toY: value,
-                                                gradient: const LinearGradient(
-                                                  colors: [
-                                                    Colors.purpleAccent,
-                                                    Colors.deepPurple,
-                                                  ],
-                                                ),
-                                                width: 14,
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                            ],
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
+                                    child: _buildBarChart(), 
                                   ),
                                   if (isSalesLoading)
                                     const Text(
@@ -416,13 +350,116 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  double _calculateMaxY(Map<String, double> data) {
+  Widget _buildBarChart() {
+    final entries = salesPerDay.entries.toList();
+
+    return BarChart(
+      BarChartData(
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            tooltipBgColor: Colors.black87,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final idx = group.x.toInt();
+              if (idx < 0 || idx >= entries.length) return null;
+              final day = entries[idx].key;
+              final data = entries[idx].value;
+              final amount = ((data['amount'] ?? 0) as num).toDouble().toStringAsFixed(2);
+              final count = ((data['count'] ?? 0) as num).toInt();
+
+              return BarTooltipItem(
+                '₱$amount\n$day\n🛒 $count products',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+          ),
+        ),
+        alignment: BarChartAlignment.spaceAround,
+        maxY: _calculateMaxY(salesPerDay),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              reservedSize: 50,
+              showTitles: true,
+              interval: _calculateInterval(salesPerDay),
+              getTitlesWidget: (value, meta) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    '₱${value.toInt()}',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 36,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= salesPerDay.keys.length) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6.0),
+                  child: Text(
+                    salesPerDay.keys.elementAt(index),
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                );
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(
+          show: true,
+          horizontalInterval: _calculateInterval(salesPerDay),
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Colors.grey.withOpacity(0.2),
+            strokeWidth: 1,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: entries.asMap().entries.map((entry) {
+          final index = entry.key;
+          final data = entry.value.value;
+          final amount = ((data['amount'] ?? 0) as num).toDouble();
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: amount,
+                gradient: const LinearGradient(
+                  colors: [Colors.purpleAccent, Colors.deepPurple],
+                ),
+                width: 14,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  double _calculateMaxY(Map<String, Map<String, dynamic>> data) {
     if (data.isEmpty) return 100;
-    final max = data.values.reduce((a, b) => a > b ? a : b);
+    final amounts = data.values
+        .map((v) => ((v['amount'] ?? 0) as num).toDouble())
+        .toList();
+    final max = amounts.reduce((a, b) => a > b ? a : b);
     return (max / 100).ceil() * 100 + 100;
   }
 
-  double _calculateInterval(Map<String, double> data) {
+  double _calculateInterval(Map<String, Map<String, dynamic>> data) {
     final maxY = _calculateMaxY(data);
     return (maxY / 5).ceilToDouble();
   }

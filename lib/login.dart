@@ -99,7 +99,7 @@ class _LoginState extends State<Login> {
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.blue.shade100,
-                    backgroundImage: const AssetImage("images/logo_no_text.png"),
+                   backgroundImage:const AssetImage("assets/images/logo_no_text.png"),
                   ),
                   const SizedBox(height: 20),
                   const Text(
