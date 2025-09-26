@@ -7,7 +7,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'dart:html' as html;
 
 Future<void> generatePdfReport(DateTime selectedMonth) async {
-  final font = pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'));
+  final font =
+      pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'));
   final pdf = pw.Document();
 
   final String monthYear = DateFormat('MMMM yyyy').format(selectedMonth);
@@ -24,12 +25,14 @@ Future<void> generatePdfReport(DateTime selectedMonth) async {
       theme: pw.ThemeData.withFont(base: font),
       build: (context) => [
         pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
           children: [
-            pw.SizedBox(),
+            pw.SizedBox(width: 20),
             pw.Column(
               children: [
-                pw.Text("MarketLink", style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                pw.Text("MarketLink",
+                    style: pw.TextStyle(
+                        fontSize: 22, fontWeight: pw.FontWeight.bold)),
                 pw.Text("Sales Report for the month of $monthYear"),
               ],
             ),
@@ -37,39 +40,102 @@ Future<void> generatePdfReport(DateTime selectedMonth) async {
           ],
         ),
         pw.SizedBox(height: 20),
-        pw.Text("Total Sales: ₱${reportData['totalSales'].toStringAsFixed(2)}", style:const pw.TextStyle(fontSize: 16)),
+        pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: "TOTAL SALES THIS MONTH: ",
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.TextSpan(
+                text: "₱${reportData['totalSales'].toStringAsFixed(2)}",
+                style: const pw.TextStyle(
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+
         pw.SizedBox(height: 30),
 
         // Top Sellers
-        pw.Text("Top 3 Sellers", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-        if (reportData['topSellers'].isEmpty)
-          pw.Text("No sellers data available.",  style: const pw.TextStyle(fontSize: 12))
-        else
-          ...reportData['topSellers'].map<pw.Widget>((seller) => pw.Bullet(
-              text: "${seller['name']} – ₱${seller['sales']} (${seller['quantity']} items)",
-            )),
+        pw.Text("Top 3 Sellers",
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        reportData['topSellers'].isEmpty
+            ? pw.Text("No sellers data available.",
+                style: const pw.TextStyle(fontSize: 12))
+            : pw.TableHelper.fromTextArray(
+                headers: [
+                  "Seller Name",
+                  "Total Sales this Month",
+                  "Products Sold"
+                ],
+                headerStyle:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                cellStyle: const pw.TextStyle(fontSize: 12),
+                cellAlignment: pw.Alignment.centerLeft,
+                border: pw.TableBorder.all(),
+                data: reportData['topSellers']
+                    .map<List<String>>((seller) => [
+                          seller['name'].toString(),
+                          "₱${seller['sales'].toString()}",
+                          seller['quantity'].toString(),
+                        ])
+                    .toList(),
+              ),
 
         pw.SizedBox(height: 20),
 
-        // Top Products
-        pw.Text("Top 3 Products", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-        if (reportData['topProducts'].isEmpty)
-          pw.Text("No product data available.", style:const pw.TextStyle(fontSize: 12))
-        else
-          ...reportData['topProducts'].map<pw.Widget>((product) => pw.Bullet(
-              text: "${product['name']} – ₱${product['sales']} (${product['quantity']} sold)",
-            )),
+        pw.Text("Top 3 Products",
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        reportData['topProducts'].isEmpty
+            ? pw.Text("No product data available.",
+                style: const pw.TextStyle(fontSize: 12))
+            : pw.TableHelper.fromTextArray(
+                headers: [
+                  "Product Name",
+                  "Total Sales this Month",
+                  "Quantity Sold"
+                ],
+                headerStyle:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                cellStyle: const pw.TextStyle(fontSize: 12),
+                cellAlignment: pw.Alignment.centerLeft,
+                border: pw.TableBorder.all(),
+                data: reportData['topProducts']
+                    .map<List<String>>((product) => [
+                          product['name'].toString(),
+                          "₱${product['sales'].toString()}",
+                          product['quantity'].toString(),
+                        ])
+                    .toList(),
+              ),
 
         pw.SizedBox(height: 20),
 
-        // Top Riders
-        pw.Text("Top 3 Riders", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-        if (reportData['topRiders'].isEmpty)
-          pw.Text("No rider data available.", style:const pw.TextStyle(fontSize: 12))
-        else
-          ...reportData['topRiders'].map<pw.Widget>((rider) => pw.Bullet(
-              text: "${rider['name']} – ${rider['deliveries']} deliveries",
-            )),
+        pw.Text("Top 3 Riders",
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        reportData['topRiders'].isEmpty
+            ? pw.Text("No rider data available.",
+                style: const pw.TextStyle(fontSize: 12))
+            : pw.TableHelper.fromTextArray(
+                headers: ["Name", "Number of Deliveries"],
+                headerStyle:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                cellStyle: const pw.TextStyle(fontSize: 12),
+                cellAlignment: pw.Alignment.centerLeft,
+                border: pw.TableBorder.all(),
+                data: reportData['topRiders']
+                    .map<List<String>>((rider) => [
+                          rider['name'].toString(),
+                          rider['deliveries'].toString(),
+                        ])
+                    .toList(),
+              ),
       ],
     ),
   );
@@ -114,7 +180,6 @@ Future<Map<String, dynamic>> fetchSalesReportData(DateTime month) async {
 
   for (var doc in ordersSnapshot.docs) {
     final data = doc.data();
-    debugPrint("Processing order: ${doc.id}");
 
     final double price = (data['price'] ?? 0).toDouble();
     final int qty = (data['quantity'] ?? 0).toInt();
@@ -139,10 +204,9 @@ Future<Map<String, dynamic>> fetchSalesReportData(DateTime month) async {
     }
 
     // Riders
-  // Riders
-if (riderId != null && riderId.trim().isNotEmpty) {
-  riderDeliveries[riderId] = (riderDeliveries[riderId] ?? 0) + 1; 
-}
+    if (riderId != null && riderId.trim().isNotEmpty) {
+      riderDeliveries[riderId] = (riderDeliveries[riderId] ?? 0) + 1;
+    }
   }
 
   debugPrint("Total sales: $totalSales");
@@ -150,55 +214,67 @@ if (riderId != null && riderId.trim().isNotEmpty) {
   debugPrint("Products found: ${productStats.length}");
   debugPrint("Riders found: ${riderDeliveries.length}");
 
-  Future<String> getName(String id, String collection) async {
-    try {
-      final snap = await firestore.collection(collection).doc(id).get();
-      if (!snap.exists) return 'Unknown';
-      final data = snap.data();
-      if (data == null) return 'Unknown';
-      return "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
-    } catch (e) {
-      debugPrint("Failed to get name for $id in $collection: $e");
-      return 'Unknown';
-    }
-  }
+  final sellerIds = sellerStats.keys.toList();
+  final productIds = productStats.keys.toList();
+  final riderIds = riderDeliveries.keys.toList();
 
-  // Top Sellers
+  final sellerFutures = sellerIds.map((id) async {
+    final snap = await firestore.collection('sellers').doc(id).get();
+    final data = snap.data();
+    final name = data == null
+        ? 'Unknown'
+        : "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+    return MapEntry(id, name.isEmpty ? 'Unknown' : name);
+  });
+
+  final productFutures = productIds.map((id) async {
+    final snap = await firestore.collection('products').doc(id).get();
+    final name = snap.data()?['productName'] ?? 'Unknown';
+    return MapEntry(id, name);
+  });
+
+  final riderFutures = riderIds.map((id) async {
+    final snap = await firestore.collection('riders').doc(id).get();
+    final data = snap.data();
+    final name = data == null
+        ? 'Unknown'
+        : "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+    return MapEntry(id, name.isEmpty ? 'Unknown' : name);
+  });
+
+  final sellerNames = Map.fromEntries(await Future.wait(sellerFutures));
+  final productNames = Map.fromEntries(await Future.wait(productFutures));
+  final riderNames = Map.fromEntries(await Future.wait(riderFutures));
+
   List<Map<String, dynamic>> topSellers = [];
   final sortedSellers = sellerStats.entries.toList()
     ..sort((a, b) => b.value['sales'].compareTo(a.value['sales']));
   for (var entry in sortedSellers.take(3)) {
-    final name = await getName(entry.key, 'sellers');
-    debugPrint("Top seller: $name – ₱${entry.value['sales']} – ${entry.value['quantity']} items");
+    final name = sellerNames[entry.key] ?? 'Unknown';
     topSellers.add({
       'name': name,
       'sales': entry.value['sales'].toStringAsFixed(2),
-      'quantity': entry.value['quantity']
+      'quantity': entry.value['quantity'],
     });
   }
 
-  // Top Products
   List<Map<String, dynamic>> topProducts = [];
   final sortedProducts = productStats.entries.toList()
     ..sort((a, b) => b.value['sales'].compareTo(a.value['sales']));
   for (var entry in sortedProducts.take(3)) {
-    final snap = await firestore.collection('products').doc(entry.key).get();
-    final name = snap.data()?['productName'] ?? 'Unknown';
-    debugPrint("Top product: $name – ₱${entry.value['sales']} – ${entry.value['quantity']} sold");
+    final name = productNames[entry.key] ?? 'Unknown';
     topProducts.add({
       'name': name,
       'sales': entry.value['sales'].toStringAsFixed(2),
-      'quantity': entry.value['quantity']
+      'quantity': entry.value['quantity'],
     });
   }
 
-  // Top Riders
   List<Map<String, dynamic>> topRiders = [];
   final sortedRiders = riderDeliveries.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
   for (var entry in sortedRiders.take(3)) {
-    final name = await getName(entry.key, 'riders');
-    debugPrint("Top rider: $name – ${entry.value} deliveries");
+    final name = riderNames[entry.key] ?? 'Unknown';
     topRiders.add({
       'name': name,
       'deliveries': entry.value,

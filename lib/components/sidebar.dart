@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:marketlinkweb/components/components.dart';
 import 'package:marketlinkweb/pages/customers.dart';
@@ -5,6 +7,7 @@ import 'package:marketlinkweb/pages/dashboard.dart';
 import 'package:marketlinkweb/pages/products.dart';
 import 'package:marketlinkweb/pages/riders.dart';
 import 'package:marketlinkweb/pages/sellers.dart';
+import 'package:marketlinkweb/pages/services.dart';
 
 class Sidebar extends StatelessWidget {
   final double width;
@@ -32,7 +35,7 @@ class Sidebar extends StatelessWidget {
               onPageSelected: onPageSelected,
             ),
             SidebarButton(
-                label: isWeb ? 'Customer' : '',
+                label: isWeb ? 'Customers' : '',
                 icon: Icons.person,
                 page: const Customers(),
                 onPageSelected: onPageSelected),
@@ -40,6 +43,11 @@ class Sidebar extends StatelessWidget {
                 label: isWeb ? 'Products' : '',
                 icon: Icons.sell,
                 page: const Products(),
+                onPageSelected: onPageSelected),
+                  SidebarButton(
+                label: isWeb ? 'Services' : '',
+                icon: Icons.build,
+                page: const Services(),
                 onPageSelected: onPageSelected),
             SidebarButton(
                 label: isWeb ? 'Sellers' : '',
